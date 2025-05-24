@@ -131,27 +131,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			val := m.textarea.Value()
 			if strings.TrimSpace(val) != "" {
 				m.messages = append(m.messages, m.senderStyle.Render("You: ")+val)
-				_, _ = m.Conn.Write([]byte(val + "\n"))
+				_, _ = m.Conn.Write([]byte(val + "\n")) // Sends the message to the server
 				m.viewport.SetContent(lipgloss.NewStyle().Width(m.viewport.Width).Render(strings.Join(m.messages, "\n")))
 				m.textarea.Reset()
 				m.viewport.GotoBottom()
 			}
 		}
 	case messageReceivedMsg:
-		// Try to extract sender name from the message, e.g. "x<name>: <msg>"
 		msgStr := string(msg)
-		if strings.HasPrefix(msgStr, "x") && strings.Contains(msgStr, ": ") {
-			parts := strings.SplitN(msgStr[1:], ": ", 2)
-			if len(parts) == 2 {
-				name := parts[0]
-				content := parts[1]
-				m.messages = append(m.messages, m.senderStyle.Render(name+": ")+content)
+		parts := strings.SplitN(msgStr, ": ", 2)
+		var msgLine string
+		if len(parts) == 2 {
+			sender := strings.TrimSpace(parts[0])
+			content := strings.TrimSpace(parts[1])
+			if sender == m.ClientName {
+				msgLine = m.senderStyle.Render("You: ") + content
 			} else {
-				m.messages = append(m.messages, m.senderStyle.Render(msgStr))
+				msgLine = m.senderStyle.Render(sender+": ") + content
 			}
 		} else {
-			m.messages = append(m.messages, m.senderStyle.Render(msgStr))
+			msgLine = m.senderStyle.Render(msgStr)
 		}
+		m.messages = append(m.messages, msgLine)
 		m.viewport.SetContent(lipgloss.NewStyle().Width(m.viewport.Width).Render(strings.Join(m.messages, "\n")))
 		m.textarea.Reset()
 		m.viewport.GotoBottom()
